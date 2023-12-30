@@ -19,6 +19,8 @@ type User struct {
 	Verified         bool      `gorm:"not null"`
 	CreatedAt        time.Time `gorm:"not null"`
 	UpdatedAt        time.Time `gorm:"not null"`
+
+	Baskets []Basket `gorm:"foreignKey:User;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 type SignUpInput struct {
