@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"github.com/thanhpk/randstr"
 	"net/http"
 	"strings"
 	"time"
@@ -47,7 +48,7 @@ func (ac *AuthController) SignUpUser(ctx *gin.Context) {
 		Email:     strings.ToLower(payload.Email),
 		Password:  hashedPassword,
 		Role:      "user",
-		Verified:  true,
+		Verified:  false,
 		Photo:     payload.Photo,
 		Provider:  "local",
 		CreatedAt: now,
@@ -74,7 +75,63 @@ func (ac *AuthController) SignUpUser(ctx *gin.Context) {
 		CreatedAt: newUser.CreatedAt,
 		UpdatedAt: newUser.UpdatedAt,
 	}
-	ctx.JSON(http.StatusCreated, gin.H{"status": "success", "data": gin.H{"user": userResponse}})
+
+	config, _ := initializers.LoadConfig(".")
+
+	// Generate Verification Code
+	code := randstr.String(20)
+
+	verificationCode := utils.Encode(code)
+
+	// Update User in Database
+	newUser.VerificationCode = verificationCode
+	ac.DB.Save(newUser)
+
+	var firstName = newUser.Name
+
+	if strings.Contains(firstName, " ") {
+		firstName = strings.Split(firstName, " ")[1]
+	}
+
+	// ? Send Email
+	emailData := utils.EmailData{
+		URL:       config.ClientOrigin + "/verify-email/" + code,
+		FirstName: firstName,
+		Subject:   "Your account verification code",
+	}
+
+	utils.SendEmail(&newUser, &emailData)
+
+	message := "We sent an email with a verification code to " + newUser.Email
+
+	ctx.JSON(http.StatusCreated, gin.H{"status": "success", "message": message, "data": gin.H{"user": userResponse}})
+
+}
+
+// [...] Verify Email
+func (ac *AuthController) VerifyEmail(ctx *gin.Context) {
+
+	code := ctx.Params.ByName("verificationCode")
+	verificationCode := utils.Encode(code)
+	fmt.Println(verificationCode)
+	u, _ := ctx.Get("currentUser")
+	user := u.(models.User)
+	fmt.Println(user.VerificationCode)
+	if user.VerificationCode != verificationCode {
+		ctx.JSON(http.StatusBadRequest, gin.H{"status": "fail", "message": "Invalid verification code"})
+		return
+	}
+
+	if user.Verified {
+		ctx.JSON(http.StatusConflict, gin.H{"status": "fail", "message": "User already verified"})
+		return
+	}
+
+	user.VerificationCode = ""
+	user.Verified = true
+	ac.DB.Save(&user)
+
+	ctx.JSON(http.StatusOK, gin.H{"status": "success", "message": "Email verified successfully"})
 }
 
 // [...] Login User
