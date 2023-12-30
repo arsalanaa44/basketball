@@ -17,3 +17,9 @@ type Basket struct {
 	CreatedAt time.Time       `gorm:"not null" json:"created_at,omitempty"`
 	UpdatedAt time.Time       `gorm:"not null" json:"updated_at,omitempty"`
 }
+
+type BasketRequest struct {
+	Data   json.RawMessage `gorm:"type:json" json:"data,omitempty"`
+	Status enum.Status     `gorm:"type:varchar(255);not null" validate:"oneof=COMPLETED PENDING" json:"status,omitempty"`
+}
+

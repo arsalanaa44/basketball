@@ -19,6 +19,9 @@ var (
 
 	UserController      controllers.UserController
 	UserRouteController routes.UserRouteController
+
+	BasketController      controllers.BasketController
+	BasketRouteController routes.BasketRouteController
 )
 
 func init() {
@@ -34,6 +37,9 @@ func init() {
 
 	UserController = controllers.NewUserController(initializers.DB)
 	UserRouteController = routes.NewRouteUserController(UserController)
+
+	BasketController = controllers.NewBasketController(initializers.DB)
+	BasketRouteController = routes.NewRouteBasketController(BasketController)
 
 	server = gin.Default()
 }
@@ -59,5 +65,6 @@ func main() {
 
 	AuthRouteController.AuthRoute(router)
 	UserRouteController.UserRoute(router)
+	BasketRouteController.BasketRoute(router)
 	log.Fatal(server.Run(":" + config.ServerPort))
 }
